@@ -2,105 +2,70 @@
   <div id="app">
     <div class="level">
       <h4 class="player">
-        <div class="score" v-text="state.player.score"></div>
-        <div class="name" :style="{ color: state.player.color}" 
-          v-text="state.player.name"></div>
+        <div class="score" v-text="players.player.score"></div>
+        <div class="name" :style="{ color: players.player.color}" 
+          v-text="players.player.name"></div>
       </h4>
       <h1>Tic Tac Toe</h1>
       <h4 class="other">
-        <div class="score" v-text="state.other.score"></div>
-        <div class="name" :style="{ color: state.other.color}" 
-          v-text="state.other.name"></div>
+        <div class="score" v-text="players.other.score"></div>
+        <div class="name" :style="{ color: players.other.color}" 
+          v-text="players.other.name"></div>
       </h4>
     </div>
     <div class="cell-container">
-      <Cell v-for="(cell, index) in state.cells" :key="index" :cell="cell" @change="cellChanged(index, cell)" :index="index"/>
+      <Cell v-for="(cell, index) in cells" 
+        @click.native="cellChanged(index, cell)" 
+        :key="index" 
+        :cell="cell" 
+        :index="index"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import Cell from './components/Cell.vue';
-import store from './store';
+import {mapState, mapMutations, mapGetters, mapActions} from 'vuex';
 export default {
   name: 'app',
-  data() {
-    return {
-      state: store.state,
-    };
-  },
   components: {
     Cell
   },
   computed: {
-    isPlayerTurn() {
-      return this.state.turn == 'player';
-    },
-    currentPlayerName() {
-      return this.state[this.state.turn].name
-    },
-    currentPlayerScore() {
-      return this.state[this.state.turn].score
-    }
+    ...mapState([ 'cells', 'checks', 'turn', 'players' ]),
+    ...mapGetters(['isComplete', 'currentPlayer', 'lead', 'leader']),
   },
   methods: {
-    cellChanged(index, cell) {
-      this.state.cells[index].owner = this.state.turn
-      this.state.cells[index].empty = false
-      this.resolveGame(index);
+    ...mapActions(['resetGame', 'incrementScore']),
+    cellChanged(index) {
+      this.$store.commit('FILL_CELL', index)
+      let status = this.gameStatus(index);
+      this.proceedGame(status);
     },
-    resolveGame(index) {
-      if(this.winStatus(index)) {
-        return this.winGame();
+    gameStatus(index) {
+      if (this.$store.getters.hasWon(index)) {
+        return 'win';
+      } else if (this.isComplete) {
+        return 'nowin';
       }
-      else if( this.allFilled() ) {
-        alert('Game Drawn!');
-        return this.resetGame();
-      }
-      this.switchPlayers();
+      return 'ongoing'
     },
-    allFilled() {
-      return this.state.cells.every(item => !item.empty);
+    proceedGame(status) {
+      this[status]();
     },
-    switchPlayers() {
-      if(this.isPlayerTurn) {
-        this.state.turn = 'other';
-      } else {
-        this.state.turn = 'player';
-      }
-    },
-    checks(index) {
-      return this.state.checks.filter(item => item.indexOf(index) >= 0 );
-    },
-    winStatus(index) {
-      return this.checks(index).some(
-        item => item.split(' ').every(
-          i => !this.state.cells[i].empty && this.state.cells[i].owner == this.state.turn 
-        ) 
-      );
-    },
-    winGame() {
-      let winner = this.state[this.state.turn];
-      winner.score++
-      let lead = this.state.player.score - this.state.other.score;
-      let leader = this.state.player;
-      if (lead < 0 ) {
-        leader = this.state.other;
-        lead = -lead;
-      }
-      alert(`${winner.name} Wins, ${leader.name} is Leading by ${lead}`)
+    win() {
+      this.incrementScore();
+      alert(`${this.currentPlayer.name} Wins, ${this.leader.name} is Leading by ${this.lead}`)
       this.resetGame();
     },
-    resetGame(){
-      this.state.cells.map(item => {
-        item.owner = '';
-        item.empty = true;
-        return item;
-      });
-      this.state.turn = 'player';
+    nowin() {
+      alert('Game Drawn!');
+      this.resetGame();
+    },
+    ongoing() {
+      this.$store.commit('TOGGLE_TURN');
     }
-  },
-  mounted() {
   }
 }
 </script>
