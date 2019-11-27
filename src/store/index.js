@@ -6,16 +6,19 @@ import actions from './actions';
 Vue.use(Vuex);
 
 const state = {
+    colors: [
+        'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'indigo', 'purple', 'pink'
+    ],
     turn: 'player',
     players: {
         player: {
             name: 'Cross',
-            color: '#4cc',
+            color: 'purple',
             score: 0
         },
         other: {
             name: 'Circle',
-            color: '#c4c',
+            color: 'pink',
             score: 0
         },
     },
